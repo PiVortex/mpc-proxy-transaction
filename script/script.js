@@ -63,9 +63,9 @@ async function main(targetAccountId) {
         attachedDeposit: 0,
     })
 
-    // // Get signature
-    // result = providers.getTransactionLastResult(outcome);
-    // console.log(result);
+    // Get signature
+    result = providers.getTransactionLastResult(outcome);
+    console.log(result);
     // let {big_r, s, recovery_id} = result;
 
     

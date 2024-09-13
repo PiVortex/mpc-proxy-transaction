@@ -1,11 +1,13 @@
 use near_sdk::{near, PromiseOrValue, log, NearToken, env, PromiseError, Gas};
 use near_sdk::json_types::{U128, U64};
-use omni_transaction::near::types::{Action, TransferAction, Signature, ED25519Signature};
+use omni_transaction::near::types::{Action, TransferAction, Signature, Secp256K1Signature};
 use omni_transaction::transaction_builder::TransactionBuilder;
 use omni_transaction::transaction_builder::TxBuilder;
 use omni_transaction::types::NEAR;
 use omni_transaction::near::utils::PublicKeyStrExt;
 use omni_transaction::near::near_transaction::NearTransaction;
+
+const SIGN_CALLBACK_GAS: Gas = Gas::from_tgas(10);
 
 pub mod signer;
 pub use crate::signer::*;
@@ -23,8 +25,6 @@ pub struct FuncInput {
 pub struct Contract {
     last_tx: Option<NearTransaction>
 }
-
-const SIGN_CALLBACK_GAS: Gas = Gas::from_tgas(10);
 
 #[near]
 impl Contract {
@@ -76,28 +76,37 @@ impl Contract {
     pub fn sign_callback(
         &self,
         #[callback_result] result: Result<SignResult, PromiseError>,
-    ) -> String {
+    ) -> Vec<u8> {
         // Build for signing
 
         if let Ok(sign_result) = result {
-            let r = sign_result.big_r.affine_point;
-            let s = sign_result.s.scalar;
+            let r = &sign_result.big_r.affine_point;
+            let s = &sign_result.s.scalar;
 
+            // Get signature like secp256k1::soandso and then i can use .to_signature on it 
+
+            let r_bytes = hex::decode(r).expect("Failed to decode r from hex");
+            let s_bytes = hex::decode(s).expect("Failed to decode s from hex");
             
-        let omni_signature = Signature::ED25519(ED25519Signature {
-            r: signature_bytes[..32].try_into().unwrap(),
-            s: signature_bytes[32..].try_into().unwrap(),
-        });
+            log!("r: {:?}", r_bytes.len());
+            log!("s: {:?}", s_bytes.len());
 
-        // Build the signed transaction
-        let near_tx_signed = near_tx.build_with_signature(omni_signature);
+            let mut signature_bytes = [0u8; 65];
 
-            return "something".to_string();
+            // Step 4: Copy r into the first 33 bytes
+            signature_bytes[..33].copy_from_slice(&r_bytes);
+        
+            // Step 5: Copy s into the next 32 bytes
+            signature_bytes[33..65].copy_from_slice(&s_bytes);
 
+            let omni_signature = Signature::SECP256K1(Secp256K1Signature (signature_bytes));
+
+            let near_tx_signed = self.last_tx.as_ref().unwrap().build_with_signature(omni_signature);
+
+            return near_tx_signed;
         } else {
             panic!("Callback failed");
         }
-    
     }
     
     
