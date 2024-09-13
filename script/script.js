@@ -1,4 +1,4 @@
-const { connect, keyStores, providers } = require('near-api-js');
+const { connect, keyStores, providers, transactions } = require('near-api-js');
 const homedir = require("os").homedir();
 const path = require("path");
 const { deriveKey } = require('./kdf');
@@ -65,24 +65,41 @@ async function main(targetAccountId) {
         attachedDeposit: 0,
     })
 
-    // console.log(outcome);
-
+    // Get signature
     result = providers.getTransactionLastResult(outcome);
     console.log(result);
-    // let {big_r, s, recovery_id} = result;
-    // let r = big_r.affine_point.slice(2);
-    // s = s.scalar;
+    let {big_r, s, recovery_id} = result;
 
     // Reconstruct signature
+    const signature = new transactions.Signature({
+      keyType: 1,
+      data: Buffer.concat([
+          Buffer.from(
+              big_r.affine_point.substring(2),
+              'hex',
+          ),
+          Buffer.from(s.scalar, 'hex'),
+          Buffer.from(big_r.affine_point.substring(0, 2),
+            'hex',
+          ),
+      ]),
+    });
+
+    // Get transaction
+  //   transaction = await account.viewFunction({contractId: PROXY_CONTRACT, methodName: "get_last_tx"});
+  //   console.log(transaction);
     
+  //   const signedTx = new SignedTransaction({
+  //     transaction,
+  //     signature: new Signature({ keyType, data: signature.signature })
+  // });
+
+
+
+
     // const message = encodeTransaction(input)
 
 
-
-    // const signedTx = new SignedTransaction({
-    //   transaction,
-    //   signature: new Signature({ keyType, data: signature.signature })
-    // });
 
     // Send transaction
     // providers.sendTransaction(SignedTx);

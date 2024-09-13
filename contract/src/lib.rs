@@ -5,6 +5,7 @@ use omni_transaction::transaction_builder::TransactionBuilder;
 use omni_transaction::transaction_builder::TxBuilder;
 use omni_transaction::types::NEAR;
 use omni_transaction::near::utils::PublicKeyStrExt;
+use omni_transaction::near::near_transaction::NearTransaction;
 
 pub mod signer;
 pub use crate::signer::*;
@@ -17,12 +18,17 @@ pub struct FuncInput {
     block_hash: String,
 }
 
+#[derive(Default)]
 #[near(contract_state)]
-pub struct Contract;
+pub struct Contract {
+    last_tx: Option<NearTransaction>
+}
+
+
 
 #[near]
 impl Contract {
-    pub fn proxy_send_near(input: FuncInput) -> PromiseOrValue<String> {
+    pub fn proxy_send_near(&mut self, input: FuncInput) -> PromiseOrValue<String> {
 
         let receiver_id = "pivortex.testnet";
         let transfer_action = Action::Transfer(TransferAction { deposit: U128(1).0.into() });
@@ -37,9 +43,9 @@ impl Contract {
             .actions(actions)
             .build();
 
-        log!("Transaction: {:?}", near_tx);
-
         let payload = near_tx.build_for_signing();
+
+        self.last_tx = Some(near_tx);
 
         let payload_slice: [u8; 32] = payload[0..32]
             .try_into()
@@ -55,6 +61,10 @@ impl Contract {
                     0,
                 ))
         )
+    }
+
+    pub fn get_last_tx(&self) -> &Option<NearTransaction> {
+        &self.last_tx
     }
 }
 
