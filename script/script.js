@@ -29,8 +29,6 @@ async function main(targetAccountId) {
     // Add the public key to the target account
     // await account.addKey(publicKey);
 
-    // Create input 
-
     // Get nonce
     const accessKey = await near.connection.provider.query({
       request_type: 'view_access_key',
@@ -44,9 +42,9 @@ async function main(targetAccountId) {
     const block = await near.connection.provider.block({
       finality: "final",
     });
-
     const blockHash = block.header.hash;
 
+    // Prepare input
     const input = {
         target_account: targetAccountId,
         target_public_key: publicKey,
@@ -65,44 +63,63 @@ async function main(targetAccountId) {
         attachedDeposit: 0,
     })
 
-    // Get signature
-    result = providers.getTransactionLastResult(outcome);
-    console.log(result);
-    let {big_r, s, recovery_id} = result;
+    // // Get signature
+    // result = providers.getTransactionLastResult(outcome);
+    // console.log(result);
+    // let {big_r, s, recovery_id} = result;
+
+    
 
     // Reconstruct signature
-    const signature = new transactions.Signature({
-      keyType: 1,
-      data: Buffer.concat([
-          Buffer.from(
-              big_r.affine_point.substring(2),
-              'hex',
-          ),
-          Buffer.from(s.scalar, 'hex'),
-          Buffer.from(big_r.affine_point.substring(0, 2),
-            'hex',
-          ),
-      ]),
-    });
+    // const signature = new transactions.Signature({
+    //   keyType: 1,
+    //   data: Buffer.concat([
+    //       Buffer.from(
+    //           big_r.affine_point.substring(2),
+    //           'hex',
+    //       ),
+    //       Buffer.from(s.scalar, 'hex'),
+    //       Buffer.from(big_r.affine_point.substring(0, 2),
+    //         'hex',
+    //       ),
+    //   ]),
+    // });
 
-    // Get transaction
-  //   transaction = await account.viewFunction({contractId: PROXY_CONTRACT, methodName: "get_last_tx"});
-  //   console.log(transaction);
+    // const big_r = "03A348FABE5BCBE95E76582F39829D6D54FD969C16229360282B1520DAD7764EDC";
+    // const s = "34FA52F8CA556A72E4808634EE60CFD96EF418CEBCBBA082269864C829D14ED2";
+
+    // const signature = new transactions.Signature({
+    //   keyType: 1,
+    //   data: Buffer.concat([
+    //       Buffer.from(
+    //           big_r.substring(2),
+    //           'hex',
+    //       ),
+    //       Buffer.from(s, 'hex'),
+    //       Buffer.from(big_r.substring(0, 2),
+    //         'hex',
+    //       ),
+    //   ]),
+    // });
+
+    // // Get transaction
+    // const transaction = await account.viewFunction({contractId: PROXY_CONTRACT, methodName: "get_last_tx"});
     
-  //   const signedTx = new SignedTransaction({
-  //     transaction,
-  //     signature: new Signature({ keyType, data: signature.signature })
-  // });
+    // const signedTransaction = new transactions.SignedTransaction({
+    //     transaction,
+    //     signature,
+    // });
+
+    // console.log(signedTransaction);
+
+    // const signedSerializedTx = signedTransaction.encode();
 
 
+    // await near.connection.provider.sendJsonRpc("broadcast_tx_commit", [
+    //   Buffer.from(signedSerializedTx).toString("base64"),
+    // ]);
 
 
-    // const message = encodeTransaction(input)
-
-
-
-    // Send transaction
-    // providers.sendTransaction(SignedTx);
 }
 
 

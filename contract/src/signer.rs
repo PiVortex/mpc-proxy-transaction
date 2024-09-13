@@ -19,8 +19,19 @@ impl SignRequest {
 
 #[near(serializers = [json])]
 pub struct SignResult {
-    pub big_r: String,
-    pub s: String,
+    pub big_r: AffinePoint,
+    pub s: Scalar,
+    pub recovery_id: u8,
+}
+
+#[near(serializers = [json])]
+pub struct AffinePoint {
+    pub affine_point: String,
+}
+
+#[near(serializers = [json])]
+pub struct Scalar {
+    pub scalar: String,
 }
 
 
