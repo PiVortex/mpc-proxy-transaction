@@ -28,63 +28,60 @@ async function main(targetAccountId) {
 
     // Derive public key for the MPC to use
     const publicKey = await deriveKey(PROXY_CONTRACT, targetAccountId);
-    console.log(publicKey);
-    
+        
     // Add the public key to the target account
     // await account.addKey(publicKey);
 
     // Get nonce
-    // const accessKey = await near.connection.provider.query({
-    //   request_type: 'view_access_key',
-    //   account_id: targetAccountId,
-    //   public_key: publicKey,
-    //   finality: 'optimistic'
-    // });
-    // const nonce = accessKey.nonce;
+    const accessKey = await near.connection.provider.query({
+      request_type: 'view_access_key',
+      account_id: targetAccountId,
+      public_key: publicKey,
+      finality: 'optimistic'
+    });
+    const nonce = accessKey.nonce;
 
-    // // Get block hash
-    // const block = await near.connection.provider.block({
-    //   finality: "final",
-    // });
-    // const blockHash = block.header.hash;
+    // Get block hash
+    const block = await near.connection.provider.block({
+      finality: "final",
+    });
+    const blockHash = block.header.hash;
 
-    // // Prepare input
-    // const input = {
-    //     target_account: targetAccountId,
-    //     target_public_key: publicKey,
-    //     nonce: (nonce + 1).toString(),
-    //     block_hash: blockHash,
-    // }
+    // Prepare input
+    const input = {
+        target_account: targetAccountId,
+        target_public_key: publicKey,
+        nonce: (nonce + 1).toString(),
+        block_hash: blockHash,
+    }
 
-    // // Call the proxy contract to get signature 
-    // const outcome = await account.functionCall({
-    //     contractId: PROXY_CONTRACT,
-    //     methodName: "proxy_send_near",
-    //     args: {
-    //         input,
-    //     },
-    //     gas: "300000000000000",
-    //     attachedDeposit: 0,
-    // })
+    // Call the proxy contract to get signature 
+    const outcome = await account.functionCall({
+        contractId: PROXY_CONTRACT,
+        methodName: "proxy_send_near",
+        args: {
+            input,
+        },
+        gas: "300000000000000",
+        attachedDeposit: 0,
+    })
 
-    // // Get signature
-    // result = providers.getTransactionLastResult(outcome);
+    // Get signature
+    result = providers.getTransactionLastResult(outcome);
 
-    // const res = new Uint8Array(result);
-    // fs.writeFileSync('data.bin', Buffer.from(res));
+    const res = new Uint8Array(result);
+    // fs.writeFileSync('data.bin', Buffer.from(res)); // Choose to save in file so don't have to call contract again
 
     // Read signedTransaction binary from file and decode
-    const rawBytes = fs.readFileSync('data.bin');
-    const byteArray = new Uint8Array(rawBytes);
-    const signedTransaction = transactions.SignedTransaction.decode(byteArray);
+    // const rawBytes = fs.readFileSync('data.bin'); 
+    // const res = new Uint8Array(rawBytes);
+
+    // Decode signedTransaction
+    const signedTransaction = transactions.SignedTransaction.decode(res);
+    console.log(signedTransaction);
     
-    // Get public key object 
-    const pub_key = signedTransaction.transaction.publicKey;
-    const publicKeyData = pub_key.secp256k1Key.data;
-    const publicKeyUint8Array = new Uint8Array(publicKeyData);
-    const base58PublicKey = utils.serialize.base_encode(publicKeyUint8Array);
-    const formattedPublicKey = `secp256k1:${base58PublicKey}`;
-    const key_obj = PublicKey.fromString(formattedPublicKey);
+    // Get public key object
+    const key_obj = PublicKey.fromString(publicKey);
 
     // Get txHash from transaction
     const serializedTx = utils.serialize.serialize(
@@ -95,12 +92,11 @@ async function main(targetAccountId) {
 
     // Get signature 
     const signature = new Uint8Array(signedTransaction.signature.secp256k1Signature.data);
+    console.log(signature);
 
     // Check if signature is valid
     const isValid = key_obj.verify(txHash, signature);
-    console.log(isValid); 
+    console.log(isValid); // Signature is not valid
 }
 
 main("account-with-eth-key.testnet");
-
-// The public key is the same but the signature is not valid 
