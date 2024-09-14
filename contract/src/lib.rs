@@ -6,6 +6,7 @@ use omni_transaction::transaction_builder::TxBuilder;
 use omni_transaction::types::NEAR;
 use omni_transaction::near::utils::PublicKeyStrExt;
 use omni_transaction::near::near_transaction::NearTransaction;
+use hex::FromHex;
 
 const SIGN_CALLBACK_GAS: Gas = Gas::from_tgas(10);
 
@@ -68,10 +69,6 @@ impl Contract {
         )
     }
 
-    // pub fn get_last_tx(&self) -> &Option<NearTransaction> {
-    //     &self.last_tx
-    // }
-
     #[private]
     pub fn sign_callback(
         &self,
@@ -80,24 +77,19 @@ impl Contract {
         // Build for signing
 
         if let Ok(sign_result) = result {
-            let r = &sign_result.big_r.affine_point;
+            let big_r = &sign_result.big_r.affine_point;
             let s = &sign_result.s.scalar;
+            let v = sign_result.recovery_id;
 
-            // Get signature like secp256k1::soandso and then i can use .to_signature on it 
+            let r = &big_r[2..];
 
-            let r_bytes = hex::decode(r).expect("Failed to decode r from hex");
-            let s_bytes = hex::decode(s).expect("Failed to decode s from hex");
+            let r_bytes = Vec::from_hex(r).expect("Invalid hex in r");
+            let s_bytes = Vec::from_hex(s).expect("Invalid hex in s");
             
-            log!("r: {:?}", r_bytes.len());
-            log!("s: {:?}", s_bytes.len());
-
             let mut signature_bytes = [0u8; 65];
-
-            // Step 4: Copy r into the first 33 bytes
-            signature_bytes[..33].copy_from_slice(&r_bytes);
-        
-            // Step 5: Copy s into the next 32 bytes
-            signature_bytes[33..65].copy_from_slice(&s_bytes);
+            signature_bytes[..32].copy_from_slice(&r_bytes);
+            signature_bytes[32..64].copy_from_slice(&s_bytes); 
+            signature_bytes[64] = v; 
 
             let omni_signature = Signature::SECP256K1(Secp256K1Signature (signature_bytes));
 
