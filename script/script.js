@@ -1,7 +1,10 @@
-const { connect, keyStores, providers, transactions } = require('near-api-js');
+const { connect, keyStores, providers, transactions, utils, publicKey } = require('near-api-js');
 const homedir = require("os").homedir();
 const path = require("path");
 const { deriveKey } = require('./kdf');
+const fs = require('fs');
+const { PublicKey } = require('near-api-js/lib/utils');
+const sha256 = require('js-sha256');
 
 const CREDENTIALS_DIR = ".near-credentials";
 const credentialsPath = path.join(homedir, CREDENTIALS_DIR);
@@ -24,104 +27,80 @@ async function main(targetAccountId) {
     const account = await near.account(targetAccountId);
 
     // Derive public key for the MPC to use
-    publicKey = await deriveKey(PROXY_CONTRACT, targetAccountId);
+    const publicKey = await deriveKey(PROXY_CONTRACT, targetAccountId);
+    console.log(publicKey);
     
     // Add the public key to the target account
     // await account.addKey(publicKey);
 
     // Get nonce
-    const accessKey = await near.connection.provider.query({
-      request_type: 'view_access_key',
-      account_id: targetAccountId,
-      public_key: publicKey,
-      finality: 'optimistic'
-    });
-    const nonce = accessKey.nonce;
+    // const accessKey = await near.connection.provider.query({
+    //   request_type: 'view_access_key',
+    //   account_id: targetAccountId,
+    //   public_key: publicKey,
+    //   finality: 'optimistic'
+    // });
+    // const nonce = accessKey.nonce;
 
-    // Get block hash
-    const block = await near.connection.provider.block({
-      finality: "final",
-    });
-    const blockHash = block.header.hash;
+    // // Get block hash
+    // const block = await near.connection.provider.block({
+    //   finality: "final",
+    // });
+    // const blockHash = block.header.hash;
 
-    // Prepare input
-    const input = {
-        target_account: targetAccountId,
-        target_public_key: publicKey,
-        nonce: (nonce + 1).toString(),
-        block_hash: blockHash,
-    }
+    // // Prepare input
+    // const input = {
+    //     target_account: targetAccountId,
+    //     target_public_key: publicKey,
+    //     nonce: (nonce + 1).toString(),
+    //     block_hash: blockHash,
+    // }
 
-    // Call the proxy contract to get signature 
-    const outcome = await account.functionCall({
-        contractId: PROXY_CONTRACT,
-        methodName: "proxy_send_near",
-        args: {
-            input,
-        },
-        gas: "300000000000000",
-        attachedDeposit: 0,
-    })
+    // // Call the proxy contract to get signature 
+    // const outcome = await account.functionCall({
+    //     contractId: PROXY_CONTRACT,
+    //     methodName: "proxy_send_near",
+    //     args: {
+    //         input,
+    //     },
+    //     gas: "300000000000000",
+    //     attachedDeposit: 0,
+    // })
 
-    // Get signature
-    result = providers.getTransactionLastResult(outcome);
-    console.log(result);
-    // let {big_r, s, recovery_id} = result;
+    // // Get signature
+    // result = providers.getTransactionLastResult(outcome);
 
+    // const res = new Uint8Array(result);
+    // fs.writeFileSync('data.bin', Buffer.from(res));
+
+    // Read signedTransaction binary from file and decode
+    const rawBytes = fs.readFileSync('data.bin');
+    const byteArray = new Uint8Array(rawBytes);
+    const signedTransaction = transactions.SignedTransaction.decode(byteArray);
     
+    // Get public key object 
+    const pub_key = signedTransaction.transaction.publicKey;
+    const publicKeyData = pub_key.secp256k1Key.data;
+    const publicKeyUint8Array = new Uint8Array(publicKeyData);
+    const base58PublicKey = utils.serialize.base_encode(publicKeyUint8Array);
+    const formattedPublicKey = `secp256k1:${base58PublicKey}`;
+    const key_obj = PublicKey.fromString(formattedPublicKey);
 
-    // Reconstruct signature
-    // const signature = new transactions.Signature({
-    //   keyType: 1,
-    //   data: Buffer.concat([
-    //       Buffer.from(
-    //           big_r.affine_point.substring(2),
-    //           'hex',
-    //       ),
-    //       Buffer.from(s.scalar, 'hex'),
-    //       Buffer.from(big_r.affine_point.substring(0, 2),
-    //         'hex',
-    //       ),
-    //   ]),
-    // });
+    // Get txHash from transaction
+    const serializedTx = utils.serialize.serialize(
+      transactions.SCHEMA.Transaction,
+      signedTransaction.transaction
+    );
+    const txHash = new Uint8Array(sha256.sha256.array(serializedTx));
 
-    // const big_r = "03A348FABE5BCBE95E76582F39829D6D54FD969C16229360282B1520DAD7764EDC";
-    // const s = "34FA52F8CA556A72E4808634EE60CFD96EF418CEBCBBA082269864C829D14ED2";
+    // Get signature 
+    const signature = new Uint8Array(signedTransaction.signature.secp256k1Signature.data);
 
-    // const signature = new transactions.Signature({
-    //   keyType: 1,
-    //   data: Buffer.concat([
-    //       Buffer.from(
-    //           big_r.substring(2),
-    //           'hex',
-    //       ),
-    //       Buffer.from(s, 'hex'),
-    //       Buffer.from(big_r.substring(0, 2),
-    //         'hex',
-    //       ),
-    //   ]),
-    // });
-
-    // // Get transaction
-    // const transaction = await account.viewFunction({contractId: PROXY_CONTRACT, methodName: "get_last_tx"});
-    
-    // const signedTransaction = new transactions.SignedTransaction({
-    //     transaction,
-    //     signature,
-    // });
-
-    // console.log(signedTransaction);
-
-    // const signedSerializedTx = signedTransaction.encode();
-
-
-    // await near.connection.provider.sendJsonRpc("broadcast_tx_commit", [
-    //   Buffer.from(signedSerializedTx).toString("base64"),
-    // ]);
-
-
+    // Check if signature is valid
+    const isValid = key_obj.verify(txHash, signature);
+    console.log(isValid); 
 }
 
-
-
 main("account-with-eth-key.testnet");
+
+// The public key is the same but the signature is not valid 
