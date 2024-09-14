@@ -79,17 +79,18 @@ impl Contract {
         if let Ok(sign_result) = result {
             let big_r = &sign_result.big_r.affine_point;
             let s = &sign_result.s.scalar;
-            let v = sign_result.recovery_id;
 
             let r = &big_r[2..];
+            let end = &big_r[..2];
 
             let r_bytes = Vec::from_hex(r).expect("Invalid hex in r");
             let s_bytes = Vec::from_hex(s).expect("Invalid hex in s");
+            let end_bytes = Vec::from_hex(end).expect("Invalid hex in end");
             
             let mut signature_bytes = [0u8; 65];
             signature_bytes[..32].copy_from_slice(&r_bytes);
             signature_bytes[32..64].copy_from_slice(&s_bytes); 
-            signature_bytes[64] = v; 
+            signature_bytes[64] = end_bytes[0]; 
 
             let omni_signature = Signature::SECP256K1(Secp256K1Signature (signature_bytes));
 
