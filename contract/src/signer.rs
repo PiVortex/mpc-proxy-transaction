@@ -34,7 +34,6 @@ pub struct Scalar {
     pub scalar: String,
 }
 
-
 #[ext_contract(ext_signer)]
 pub trait SignerInterface {
     fn sign(&mut self, request: SignRequest) -> PromiseOrValue<SignResult>;
