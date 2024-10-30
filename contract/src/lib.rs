@@ -7,8 +7,7 @@ use omni_transaction::near::types::{
     U64 as OmniU64,
 };
 use omni_transaction::near::utils::PublicKeyStrExt;
-use omni_transaction::transaction_builder::TransactionBuilder;
-use omni_transaction::transaction_builder::TxBuilder;
+use omni_transaction::transaction_builder::{TransactionBuilder, TxBuilder};
 use omni_transaction::types::NEAR;
 use sha2::{Digest, Sha256};
 
